@@ -1,0 +1,39 @@
+# ============================================
+# Telegram APK Mod Bot - Git Ignore
+# ============================================
+
+# --- Secrets & Config ---
+.env
+.env.local
+.env.production
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+venv/
+.venv/
+
+# --- Runtime Data ---
+states/
+tmp/
+keystore/
+
+# --- IDE ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- OS ---
+.DS_Store
+Thumbs.db
+
+# --- Logs ---
+*.log

@@ -1,0 +1,15 @@
+[build]
+# Use Dockerfile for building
+builder = "DOCKERFILE"
+dockerfilePath = "telegram-apk-bot/Dockerfile"
+
+[deploy]
+# Start command
+startCommand = "python3 main.py"
+# Restart on failure
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[env]
+# Environment variables (set BOT_TOKEN in Railway dashboard)
+PYTHONUNBUFFERED = "1"
