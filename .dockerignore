@@ -1,4 +1,6 @@
-# Fichye ak repèrtwar ki pa dwe antre nan imaj Docker la
+# =============================================================================
+# .dockerignore — Fichye ki pa pou antre nan imaj Docker la
+# =============================================================================
 .git
 .gitignore
 __pycache__
