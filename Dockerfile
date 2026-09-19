@@ -16,9 +16,9 @@ ENV APKTOOL_VERSION=2.10.0
 
 # ---- Enstale depandans sistèm ----
 # Nou sèvi ak openjdk (jre) olye default-jre paske imaj slim la pa gen apt
-# repozitwa konplè default-jdk. openjdk-17-jre-headless ap ase pou apktool.
+# repozitwa konplè default-jdk. openjdk-21-jre-headless ap ase pou apktool.
 RUN apt-get update && apt-get install -y --no-install-recommends \
-        openjdk-17-jre-headless \
+        openjdk-21-jre-headless \
         curl \
         unzip \
         ca-certificates \
