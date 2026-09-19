@@ -34,18 +34,20 @@ RUN curl -L -o /usr/local/bin/apktool.jar \
 # Zouti sa yo soti nan Android SDK build-tools. Nou telechaje yon vèsyon
 # build-tools konpatib epi nou ekstrè zouti nesesè yo nan /usr/local/bin.
 ENV BUILD_TOOLS_VERSION=34
+# Nou kenbe tout katab build-tools la ansanm (binèr + lib) paske zipalign,
+# aapt ak apksigner bezwen bibliyotèk yo (lib/libc++.so) ki nan MENM katab.
+# Nou mete katab la nan PATH pou zouti yo jwenn lib yo otomatikman.
 RUN curl -L -o /tmp/build-tools.zip \
         "https://dl.google.com/android/repository/build-tools_r${BUILD_TOOLS_VERSION}-linux.zip" \
-    && mkdir -p /tmp/bt \
-    && unzip -q /tmp/build-tools.zip -d /tmp/bt \
-    && BT_DIR="/tmp/bt/android-14" \
-    && cp "$BT_DIR/aapt" /usr/local/bin/aapt \
-    && cp "$BT_DIR/aapt2" /usr/local/bin/aapt2 \
-    && cp "$BT_DIR/zipalign" /usr/local/bin/zipalign \
-    && cp "$BT_DIR/apksigner" /usr/local/bin/apksigner \
-    && cp -r "$BT_DIR/lib" /usr/local/lib/android-lib 2>/dev/null || true \
-    && chmod +x /usr/local/bin/aapt /usr/local/bin/aapt2 /usr/local/bin/zipalign /usr/local/bin/apksigner \
-    && rm -rf /tmp/build-tools.zip /tmp/bt
+    && mkdir -p /opt/android-sdk/build-tools \
+    && unzip -q /tmp/build-tools.zip -d /opt/android-sdk/build-tools \
+    && BT_DIR="/opt/android-sdk/build-tools/android-14" \
+    && chmod +x "$BT_DIR/aapt" "$BT_DIR/aapt2" "$BT_DIR/zipalign" "$BT_DIR/apksigner" \
+    && ln -sf "$BT_DIR/aapt" /usr/local/bin/aapt \
+    && ln -sf "$BT_DIR/aapt2" /usr/local/bin/aapt2 \
+    && ln -sf "$BT_DIR/zipalign" /usr/local/bin/zipalign \
+    && ln -sf "$BT_DIR/apksigner" /usr/local/bin/apksigner \
+    && rm -rf /tmp/build-tools.zip
 
 # ---- Depandans Python ----
 WORKDIR /app
