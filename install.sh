@@ -1,79 +1,122 @@
 #!/usr/bin/env bash
-# ============================================================
-# Telegram APK Mod Bot - Installation Script
-# Tested on Ubuntu 22.04+ / Debian 12+
-# ============================================================
-
+# =============================================================================
+# install.sh — Enstalasyon konplè pou APK Mod Bot (Linux)
+#
+# Sa script la fè:
+#   1. Mete ajou apt epi enstale depandans sistèm (apktool, zipalign,
+#      apksigner, aapt/aapt2, default-jdk, python3, pip)
+#   2. Telechaje apktool nan dènye vèsyon (GitHub) — vèsyon apt ka fin vye
+#   3. Enstale depandans Python (python-telegram-bot)
+#   4. Kreye keystore pou siyati (avèk keytool) si li pa egziste
+#   5. Kreye repèrtwar travay yo
+#
+# Kijan pou kouri:  bash install.sh
+# =============================================================================
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m'
+APKTOOL_VERSION="2.10.0"
 
-log()  { echo -e "${GREEN}[+]${NC} $*"; }
-warn() { echo -e "${YELLOW}[!]${NC} $*"; }
-err()  { echo -e "${RED}[x]${NC} $*" >&2; }
+echo "=============================================="
+echo " APK Mod Bot — Enstalasyon"
+echo "=============================================="
 
-# ---- 1. System packages ----
-log "Updating apt…"
-sudo apt-get update -qq
-
-log "Installing system dependencies…"
-sudo apt-get install -y -qq \
-    default-jdk \
+# ---- Depandans sistèm ----
+echo "[1/6] Enstale pakè sistèm (apktool, zipalign, apksigner, aapt, Java, Python)..."
+sudo apt-get update
+sudo apt-get install -y \
     apktool \
     zipalign \
     apksigner \
     aapt \
+    aapt2 \
+    default-jdk \
     python3 \
     python3-pip \
-    python3-venv
+    python3-venv \
+    curl \
+    unzip
 
-# ---- 2. Python virtual environment ----
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-VENV_DIR="${SCRIPT_DIR}/venv"
+# ---- Verifye bwa yo ----
+echo "[2/6] Verifye ekzekitab yo..."
+for cmd in zipalign apksigner keytool java python3; do
+    if command -v "$cmd" >/dev/null 2>&1; then
+        echo "  ✓ $cmd -> $(command -v "$cmd")"
+    else
+        echo "  ✗ $cmd PA JWENN!" >&2
+        exit 1
+    fi
+done
 
-if [ ! -d "$VENV_DIR" ]; then
-    log "Creating Python virtual environment…"
-    python3 -m venv "$VENV_DIR"
+# ---- apktool pi resan (vèsyon apt ka fin vye) ----
+echo "[3/6] Enstale apktool v$APKTOOL_VERSION (dènye vèsyon GitHub)..."
+sudo curl -L -o /usr/local/bin/apktool.jar \
+    "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar"
+# Wrapper script pou kouri jar la kòm kòmand 'apktool'
+sudo bash -c 'cat > /usr/local/bin/apktool <<EOF
+#!/usr/bin/env bash
+java -jar /usr/local/bin/apktool.jar "\$@"
+EOF'
+sudo chmod +x /usr/local/bin/apktool
+
+# ---- Verifye apktool ----
+if command -v apktool >/dev/null 2>&1; then
+    echo "  ✓ apktool -> $(command -v apktool)"
+else
+    echo "  ✗ apktool PA JWENN!" >&2
+    exit 1
 fi
 
-# shellcheck source=/dev/null
-source "${VENV_DIR}/bin/activate"
+# ---- Verifye aapt/aapt2 (non ka varye selon distribisyon) ----
+echo "  Verifye aapt / aapt2..."
+if command -v aapt >/dev/null 2>&1; then
+    echo "  ✓ aapt -> $(command -v aapt)"
+elif command -v aapt2 >/dev/null 2>&1; then
+    echo "  ✓ aapt2 -> $(command -v aapt2) (aapt sèvi kòm alias)"
+else
+    echo "  ⚠ aapt/aapt2 PA JWENN — apktool ap debake resous yo lè sa nesesè." >&2
+    echo "     (Pa kritik: apktool gen pwòp rekonstriksyon resous interne.)"
+fi
 
-log "Installing Python packages…"
-pip install --upgrade pip -q
-pip install -r "${SCRIPT_DIR}/requirements.txt" -q
+# ---- Depandans Python ----
+echo "[4/6] Enstale depandans Python..."
+python3 -m pip install --upgrade pip
+python3 -m pip install -r requirements.txt
 
-# ---- 3. Signing keystore ----
-KEYSTORE="${SCRIPT_DIR}/keystore/release.keystore"
-if [ ! -f "$KEYSTORE" ]; then
-    log "Generating signing keystore…"
-    mkdir -p "$(dirname "$KEYSTORE")"
+# ---- Kreye keystore (si nesesè) ----
+echo "[5/6] Kreye keystore pou siyati (si absent)..."
+mkdir -p keys
+KEYSTORE="keys/release.keystore"
+ALIAS="modbot"
+PASS="android"
+DNAME="CN=APK Mod Bot, OU=Modding, O=ModBot, L=Port-au-Prince, S=Ouest, C=HT"
+
+if [ -f "$KEYSTORE" ]; then
+    echo "  ✓ Keystore deja egziste: $KEYSTORE"
+else
     keytool -genkeypair \
-        -alias release \
+        -v \
+        -keystore "$KEYSTORE" \
+        -alias "$ALIAS" \
         -keyalg RSA \
         -keysize 2048 \
         -validity 10000 \
-        -keystore "$KEYSTORE" \
-        -storepass apkmod123 \
-        -keypass apkmod123 \
-        -dname "CN=APK Mod Bot, OU=Dev, O=Local, L=Unknown, ST=Unknown, C=US"
-    log "Keystore created at ${KEYSTORE}"
-    warn "Default password: apkmod123  — change it in production!"
-else
-    warn "Keystore already exists, skipping generation."
+        -storepass "$PASS" \
+        -keypass "$PASS" \
+        -dname "$DNAME"
+    echo "  ✓ Keystore kreye: $KEYSTORE (alias=$ALIAS, pass=$PASS)"
 fi
 
-# ---- 4. States directory ----
-mkdir -p "${SCRIPT_DIR}/states"
-mkdir -p "${SCRIPT_DIR}/tmp"
+# ---- Kreye repèrtwar travay ----
+mkdir -p work uploads state
 
-log "Installation complete!"
 echo ""
-echo "  To run the bot:"
-echo "    1. Copy .env.example to .env and add your BOT_TOKEN"
-echo "    2. source venv/bin/activate"
-echo "    3. python main.py"
+echo "[6/6] Tout zouti enstale ak verifye ✅"
+
 echo ""
+echo "=============================================="
+echo " Enstalasyon konplè ✅"
+echo ""
+echo " Pwochen etap:"
+echo "   1. Ranpli BOT_TOKEN nan config.py (jwenn li nan @BotFather)"
+echo "   2. Lanse bot la:  python3 bot.py"
+echo "=============================================="

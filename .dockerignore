@@ -1,0 +1,13 @@
+# Fichye ak repèrtwar ki pa dwe antre nan imaj Docker la
+.git
+.gitignore
+__pycache__
+*.pyc
+work/
+uploads/
+state/
+keys/
+*.apk
+*.keystore
+README.md
+.DS_Store

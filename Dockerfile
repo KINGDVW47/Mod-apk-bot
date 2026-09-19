@@ -1,63 +1,65 @@
-============================================================
-# Telegram APK Mod Bot — Docker Image for Railway
-# ============================================================
+# =============================================================================
+# Dockerfile — APK Mod Bot (pou Railway / Render / Docker)
+#
+# Bati yon imaj ki gen tout zouti nesesè:
+#   - Python 3.11 + python-telegram-bot
+#   - Java (default-jre) pou apktool
+#   - apktool, zipalign, apksigner, aapt/aapt2
+#
+# Kijan pou konstwi:  docker build -t apk-mod-bot .
+# =============================================================================
 
-FROM ubuntu:22.04
-ENV DEBIAN_FRONTEND=noninteractive
+FROM python:3.11-slim
 
-RUN apt-get update -qq && apt-get install -y -qq --no-install-recommends \
-    default-jdk apktool zipalign apksigner aapt \
-    python3 python3-pip python3-venv curl git \
+# ---- Vèsyon apktool (dènye vèsyon) ----
+ENV APKTOOL_VERSION=2.10.0
+
+# ---- Enstale depandans sistèm ----
+# Nou sèvi ak openjdk (jre) olye default-jre paske imaj slim la pa gen apt
+# repozitwa konplè default-jdk. openjdk-17-jre-headless ap ase pou apktool.
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        openjdk-17-jre-headless \
+        curl \
+        unzip \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
+# ---- Enstale apktool (dènye vèsyon GitHub) ----
+RUN curl -L -o /usr/local/bin/apktool.jar \
+        "https://github.com/iBotPeaches/Apktool/releases/download/v${APKTOOL_VERSION}/apktool_${APKTOOL_VERSION}.jar" \
+    && printf '#!/usr/bin/env bash\njava -jar /usr/local/bin/apktool.jar "$@"\n' > /usr/local/bin/apktool \
+    && chmod +x /usr/local/bin/apktool
+
+# ---- Enstale zipalign + apksigner + aapt/aapt2 ----
+# Zouti sa yo soti nan Android SDK build-tools. Nou telechaje yon vèsyon
+# build-tools konpatib epi nou ekstrè zouti nesesè yo nan /usr/local/bin.
+ENV BUILD_TOOLS_VERSION=34.0.0
+RUN curl -L -o /tmp/build-tools.zip \
+        "https://dl.google.com/android/repository/build-tools_r${BUILD_TOOLS_VERSION}-linux.zip" \
+    && mkdir -p /tmp/bt \
+    && unzip -q /tmp/build-tools.zip -d /tmp/bt \
+    && BT_DIR="/tmp/bt/android-14" \
+    && cp "$BT_DIR/aapt" /usr/local/bin/aapt \
+    && cp "$BT_DIR/aapt2" /usr/local/bin/aapt2 \
+    && cp "$BT_DIR/zipalign" /usr/local/bin/zipalign \
+    && cp "$BT_DIR/apksigner" /usr/local/bin/apksigner \
+    && cp -r "$BT_DIR/lib" /usr/local/lib/android-lib 2>/dev/null || true \
+    && chmod +x /usr/local/bin/aapt /usr/local/bin/aapt2 /usr/local/bin/zipalign /usr/local/bin/apksigner \
+    && rm -rf /tmp/build-tools.zip /tmp/bt
+
+# ---- Depandans Python ----
 WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy from telegram-apk-bot/ (Railway context is repo root)
-COPY telegram-apk-bot/requirements.txt .
-RUN python3 -m pip install --no-cache-dir -r requirements.txt
+# ---- Kopiye kòd aplikasyon an ----
+COPY . .
 
-COPY telegram-apk-bot/ .
+# ---- Kreye repèrtwar travay yo ----
+RUN mkdir -p work uploads state keys
 
-RUN mkdir -p states tmp keystore
-
-RUN if [ ! -f keystore/release.keystore ]; then \
-        mkdir -p keystore && \
-        keytool -genkeypair -alias release -keyalg RSA -keysize 2048 \
-            -validity 10000 -keystore keystore/release.keystore \
-            -storepass apkmod123 -keypass apkmod123 \
-            -dname "CN=APK Mod Bot, OU=Dev, O=Local, L=Unknown, ST=Unknown, C=US"; \
-    fi
-
-ENV PYTHONUNBUFFERED=1
+# ---- Varyab anviwònman (Railway pral mete BOT_TOKEN isit la) ----
 ENV BOT_TOKEN=""
-CMD ["python3", "main.py"]
-Klike Commit changes
-Etap 2: Deploye sou Railway
-Ale sou https://railway.app → Login with GitHub
-Klike New Project → Deploy from GitHub Repo
-Chwazi KINGDVW47/Mod-apk-bot
-Nan Variables tab, ajoute:
-Name: BOT_TOKEN
-Value: 8935346667:AAEMQhL7oXDNItXzbk-4cNXkLCLNH6dWGjU
-Done! Bot ap kouri 24/7!
-Ou pa bezwen update lòt fichye yo pou Railway mache - Dockerfile a se sa ki enpòtan!
 
-
-Update Dockerfile sou GitHub
-
-Update bot.py ak start.py sou GitHub
-
-Montre m kijan pou update tout fichye yo
-
-Show less
-Credits used: 6
-(21)
-
-
-
-
-Rewind
-
-Boost
-
-Auto-Fix
+# ---- Kòmand demaraj: enstale keystore si absent, epi lanse bot la ----
+CMD ["bash", "start.sh"]
