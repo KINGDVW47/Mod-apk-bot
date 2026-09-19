@@ -33,7 +33,7 @@ RUN curl -L -o /usr/local/bin/apktool.jar \
 # ---- Enstale zipalign + apksigner + aapt/aapt2 ----
 # Zouti sa yo soti nan Android SDK build-tools. Nou telechaje yon vèsyon
 # build-tools konpatib epi nou ekstrè zouti nesesè yo nan /usr/local/bin.
-ENV BUILD_TOOLS_VERSION=34.0.0
+ENV BUILD_TOOLS_VERSION=34
 RUN curl -L -o /tmp/build-tools.zip \
         "https://dl.google.com/android/repository/build-tools_r${BUILD_TOOLS_VERSION}-linux.zip" \
     && mkdir -p /tmp/bt \
